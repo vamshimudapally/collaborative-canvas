@@ -11,13 +11,15 @@ const server = http.createServer(app);
 // Configure CORS for production
 const io = socketIo(server, {
   cors: {
-    origin: process.env.NODE_ENV === 'production' 
-      ? ['https://collbecanva.vercel.app'] 
-      : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    origin: process.env.ALLOWED_ORIGINS?.split(',') || [
+      'http://localhost:3000',
+      'http://127.0.0.1:3000'
+    ],
     methods: ["GET", "POST"],
     credentials: true
   }
 });
+``
 
 // Serve static files from client directory
 const clientPath = path.join(__dirname, '../client');

@@ -2,7 +2,8 @@
 class CanvasManager {
   constructor(canvasId) {
     this.canvas = document.getElementById(canvasId);
-    this.ctx = this.canvas.getContext('2d');
+    this.ctx = this.canvas.getContext('2d', { willReadFrequently: true });
+
     
     // What we're currently drawing with
     this.tool = 'pen';
@@ -18,7 +19,7 @@ class CanvasManager {
     
     // For shape tools, we need a preview canvas
     this.previewCanvas = document.createElement('canvas');
-    this.previewCtx = this.previewCanvas.getContext('2d');
+  this.previewCtx = this.previewCanvas.getContext('2d', { willReadFrequently: true });
     
     // Track other users' cursors
     this.cursors = new Map();

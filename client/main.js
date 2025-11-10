@@ -190,15 +190,13 @@ function setupWebSocketHandlers() {
   };
   
   // Remote cursor
-  wsManager.onRemoteCursor = (data) => {
-    // Get user color from users list
-    const usersList = document.getElementById('usersList');
-    const userIndicator = usersList.querySelector(`[data-user-id="${data.userId}"]`);
-    const color = userIndicator ? userIndicator.style.backgroundColor : '#999';
-    
-    canvasManager.updateRemoteCursor(data.userId, data.x, data.y, color);
-  };
+wsManager.onRemoteCursor = (data) => {
+  const usersList = document.getElementById('usersList');
+  const userIndicator = usersList.querySelector(`[data-user-id="${data.userId}"]`);
+  const color = userIndicator ? userIndicator.style.backgroundColor : '#999';
   
+  canvasManager.updateCursor(data.userId, data.x, data.y, color);
+};
   // Undo operation
   wsManager.onUndo = (data) => {
     // Redraw canvas from operations
