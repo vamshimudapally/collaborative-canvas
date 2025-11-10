@@ -1,21 +1,24 @@
 {
-  "name": "canvas",
+  "name": "collaborative-canvas",
   "version": "1.0.0",
+  "description": "Real-time collaborative drawing canvas",
   "main": "server/server.js",
   "scripts": {
-      "start" : "node server/server.js",
-      "dev" : "nodemon server/server.js"
+    "start": "node server/server.js",
+    "dev": "nodemon server/server.js"
   },
-  "keywords": ["canvas" , "websocket" , "real-time"],
+  "keywords": ["canvas", "websocket", "real-time", "collaborative"],
   "author": "vamshi krishna",
   "license": "ISC",
   "type": "commonjs",
-  "description": "Real-time collaborative drawing canvas",
   "dependencies": {
     "express": "^5.1.0",
     "socket.io": "^4.8.1"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

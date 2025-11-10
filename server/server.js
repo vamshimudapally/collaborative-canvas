@@ -7,15 +7,32 @@ const DrawingState = require('./drawing-state');
 
 const app = express();
 const server = http.createServer(app);
+
+// Configure CORS for production
 const io = socketIo(server, {
   cors: {
-    origin: "*",
-    methods: ["GET", "POST"]
+    origin: process.env.NODE_ENV === 'production' 
+      ? ['https://collbecanva.vercel.app'] 
+      : ['http://localhost:3000', 'http://127.0.0.1:3000'],
+    methods: ["GET", "POST"],
+    credentials: true
   }
 });
 
 // Serve static files from client directory
-app.use(express.static(path.join(__dirname, '../client')));
+const clientPath = path.join(__dirname, '../client');
+console.log('📁 Serving static files from:', clientPath);
+app.use(express.static(clientPath));
+
+// Health check endpoint (before catch-all)
+app.get('/health', (req, res) => {
+  res.status(200).json({ 
+    status: 'OK', 
+    timestamp: new Date().toISOString(),
+    users: roomManager.getTotalUsers(),
+    rooms: roomManager.getRoomCount()
+  });
+});
 
 // Initialize managers
 const roomManager = new RoomManager();
@@ -93,7 +110,6 @@ io.on('connection', (socket) => {
   socket.on('undo', () => {
     const lastOp = drawingState.undo(roomId);
     if (lastOp) {
-      // Broadcast undo to all users including sender
       io.to(roomId).emit('undo-operation', {
         operationId: lastOp.timestamp,
         userId: socket.id
@@ -105,7 +121,6 @@ io.on('connection', (socket) => {
   socket.on('redo', () => {
     const redoOp = drawingState.redo(roomId);
     if (redoOp) {
-      // Broadcast redo to all users including sender
       io.to(roomId).emit('redo-operation', {
         operation: redoOp,
         userId: socket.id
@@ -122,18 +137,37 @@ io.on('connection', (socket) => {
   });
   
   // Handle disconnect
-  socket.on('disconnect', () => {
-    console.log('User disconnected:', socket.id);
+  socket.on('disconnect', (reason) => {
+    console.log('User disconnected:', socket.id, 'Reason:', reason);
     roomManager.removeUser(roomId, socket.id);
     
     // Update user list
     const users = roomManager.getUsers(roomId);
     io.to(roomId).emit('users-update', users);
   });
+  
+  // Handle errors
+  socket.on('error', (error) => {
+    console.error('Socket error for user', socket.id, ':', error);
+  });
+});
+
+// Error handling
+server.on('error', (error) => {
+  console.error('Server error:', error);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('Uncaught Exception:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection at:', promise, 'reason:', reason);
 });
 
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Open http://localhost:${PORT} in your browser`);
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📊 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🌐 Open http://localhost:${PORT} in your browser`);
 });

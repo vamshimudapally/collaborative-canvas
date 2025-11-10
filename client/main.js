@@ -1,16 +1,28 @@
 // Initialize managers
-const canvasManager = new CanvasManager('canvas');
-const wsManager = new WebSocketManager();
+let canvasManager;
+let wsManager;
 
 // Current drawing state
 let currentRemoteDrawings = new Map();
 
 // Initialize application
 function init() {
-  setupUIHandlers();
-  setupCanvasHandlers();
-  setupWebSocketHandlers();
-  wsManager.connect();
+  try {
+    
+    // Initialize managers
+    canvasManager = new CanvasManager('canvas');
+    wsManager = new WebSocketManager();
+    wsManager.connect();
+    
+    setupUIHandlers();
+    setupCanvasHandlers();
+    setupWebSocketHandlers();
+    
+    console.log('🎨 Collaborative Canvas initialized');
+  } catch (error) {
+    console.error('Failed to initialize application:', error);
+    updateStatusText('Failed to initialize application');
+  }
 }
 
 // Setup UI event handlers
@@ -23,7 +35,7 @@ function setupUIHandlers() {
       
       const tool = btn.dataset.tool;
       canvasManager.setTool(tool);
-      updateStatusText(`Tool: ${tool}`);
+      updateStatusText(`Tool: ${tool.charAt(0).toUpperCase() + tool.slice(1)}`);
     });
   });
   
@@ -59,17 +71,15 @@ function setupUIHandlers() {
     strokeValue.textContent = width;
   });
   
-  // Undo button
+  // Action buttons
   document.getElementById('undoBtn').addEventListener('click', () => {
     wsManager.sendUndo();
   });
   
-  // Redo button
   document.getElementById('redoBtn').addEventListener('click', () => {
     wsManager.sendRedo();
   });
   
-  // Clear button
   document.getElementById('clearBtn').addEventListener('click', () => {
     if (confirm('Clear the entire canvas? This will affect all users.')) {
       wsManager.sendClear();
@@ -78,13 +88,22 @@ function setupUIHandlers() {
   
   // Keyboard shortcuts
   document.addEventListener('keydown', (e) => {
-    if (e.ctrlKey && e.key === 'z') {
-      e.preventDefault();
-      wsManager.sendUndo();
+    if (e.ctrlKey || e.metaKey) {
+      if (e.key === 'z') {
+        e.preventDefault();
+        wsManager.sendUndo();
+      }
+      if (e.key === 'y') {
+        e.preventDefault();
+        wsManager.sendRedo();
+      }
     }
-    if (e.ctrlKey && e.key === 'y') {
-      e.preventDefault();
-      wsManager.sendRedo();
+  });
+  
+  // Handle page unload
+  window.addEventListener('beforeunload', () => {
+    if (wsManager) {
+      wsManager.disconnect();
     }
   });
 }
@@ -124,8 +143,9 @@ function setupWebSocketHandlers() {
     console.log('Canvas initialized. User:', data.userId);
     
     // Redraw existing operations
-    if (data.operations.length > 0) {
-      canvasManager.redrawFromOperations(data.operations);
+    const operations = wsManager.getOperations();
+    if (operations.length > 0) {
+      canvasManager.redrawFromOperations(operations);
     }
     
     updateStatusText('Connected - Start drawing!');
@@ -230,13 +250,25 @@ function updateStatusText(text) {
   const statusText = document.getElementById('statusText');
   statusText.textContent = text;
   
-  // Reset after 3 seconds
-  setTimeout(() => {
-    if (statusText.textContent === text) {
-      statusText.textContent = 'Ready to draw';
-    }
-  }, 3000);
+  // Reset after 3 seconds if it's a temporary message
+  if (!text.includes('Connected') && !text.includes('Disconnected')) {
+    setTimeout(() => {
+      if (statusText.textContent === text) {
+        statusText.textContent = wsManager.connected ? 'Ready to draw' : 'Disconnected';
+      }
+    }, 3000);
+  }
 }
+
+// Enhanced CanvasManager method
+CanvasManager.prototype.redrawFromOperations = function(operations) {
+  this.clear();
+  operations.forEach(op => this.drawRemoteOperation(op));
+};
+
+CanvasManager.prototype.drawRemoteOperation = function(operation) {
+  this.drawRemote(operation);
+};
 
 // Start application when DOM is ready
 if (document.readyState === 'loading') {
